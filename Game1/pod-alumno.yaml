@@ -1,0 +1,12 @@
+# pod-alumno.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-alumno
+  namespace: test-rbac
+spec:
+  serviceAccountName: alumno
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", "3600"]

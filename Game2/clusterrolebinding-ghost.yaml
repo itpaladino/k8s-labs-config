@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ghost-binding
+subjects:
+- kind: ServiceAccount
+  name: ghost
+  namespace: ghost-ns
+roleRef:
+  kind: ClusterRole
+  name: superpowers
+  apiGroup: rbac.authorization.k8s.io
