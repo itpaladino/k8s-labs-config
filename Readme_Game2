@@ -1,0 +1,118 @@
+#LAB: El Guardián del Clúster – Aventura RBAC en Kubernetes
+
+## Sinopsis General
+
+En una empresa tecnológica futurista, un clúster de Kubernetes compartido es el corazón de todos los equipos.  
+Lo que comienza como simples errores humanos escala rápidamente a una amenaza global.
+
+Tú eres el **Guardián del Clúster**.  
+Tu misión: evitar accidentes entre equipos y desactivar al **Administrador Fantasma** antes de que sea demasiado tarde.
+
+---
+
+## Parte 1: Acceso Denegado (protección entre namespaces)
+
+### Objetivo
+
+- Controlar qué puede hacer cada equipo dentro de su namespace.
+- Evitar que un equipo borre o toque recursos de otro.
+
+### Estructura
+
+- `Namespaces`: `team-alpha`, `team-beta`
+- `ServiceAccounts`: `alpha-dev`, `beta-dev`
+- `Role`: acceso limitado a pods y deployments
+- `RoleBinding`: acceso solo a su namespace
+
+---
+
+### Paso a paso Parte 1
+
+
+# Crear namespaces
+kubectl apply -f namespaces.yaml
+
+# Crear ServiceAccounts
+kubectl apply -f serviceaccounts.yaml
+
+# Simular el caos (antes de aplicar restricciones)
+kubectl auth can-i delete deployments --as=system:serviceaccount:team-alpha:alpha-dev -n team-beta  # Debería ser NO
+
+# Aplicar Roles por namespace
+kubectl apply -f roles.yaml
+
+# Aplicar RoleBindings para cada equipo
+kubectl apply -f rolebindings.yaml
+
+# Comprobaciones:
+kubectl auth can-i delete deployments --as=system:serviceaccount:team-alpha:alpha-dev -n team-alpha  # YES
+kubectl auth can-i delete deployments --as=system:serviceaccount:team-alpha:alpha-dev -n team-beta   # NO
+```
+
+---
+
+## Parte 2: El Administrador Fantasma (ClusterRoleBinding)
+
+### Objetivo
+
+- Ver cómo una cuenta con ClusterRole puede acceder a TODO.
+- Proteger el clúster de accesos excesivos.
+
+### Estructura
+
+- Namespace: `ghost-ns`
+- ServiceAccount: `ghost`
+- ClusterRole: `superpowers`
+- ClusterRoleBinding: `ghost-binding`
+
+---
+
+### Paso a paso Parte 2
+
+
+# Crear namespace y ServiceAccount del fantasma
+kubectl apply -f ghost-account.yaml
+
+# Darle superpoderes con un ClusterRole
+kubectl apply -f clusterrole-ghost.yaml
+
+# Enlazar el ClusterRole con el fantasma
+kubectl apply -f clusterrolebinding-ghost.yaml
+
+# Comprobar que el fantasma tiene acceso global:
+kubectl auth can-i get secrets --as=system:serviceaccount:ghost-ns:ghost -n team-alpha         # YES
+kubectl auth can-i delete deployments --as=system:serviceaccount:ghost-ns:ghost -n team-beta   # YES
+kubectl auth can-i create pods --as=system:serviceaccount:ghost-ns:ghost -n kube-system        # YES
+```
+
+---
+
+## Parte Final: El Exorcismo
+
+
+# Eliminar acceso global del fantasma
+kubectl delete clusterrolebinding ghost-binding
+
+# Eliminar rol peligroso
+kubectl delete clusterrole superpowers
+
+# Eliminar al fantasma y su rastro
+kubectl delete serviceaccount ghost -n ghost-ns
+kubectl delete namespace ghost-ns
+
+# Verifica que ya no puede hacer nada
+kubectl auth can-i get secrets --as=system:serviceaccount:ghost-ns:ghost -n team-alpha  # NO
+```
+
+---
+
+## Aprendizajes
+
+- Los `Role`/`RoleBinding` limitan acciones por namespace.
+- Los `ClusterRole`/`ClusterRoleBinding` otorgan acceso global.
+- Las ServiceAccounts no tienen poderes mágicos... ¡hasta que tú se los das!
+- La seguridad empieza con buenas prácticas, no con fuego apagado.
+
+---
+
+¡Felicidades, Guardián del Clúster! Has completado un laboratorio de RBAC con historia, emoción y conocimiento real.
